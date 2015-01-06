@@ -18,7 +18,7 @@ An Arma config parser for python
   otherwise modify them in some meaningfull way.
   
 * You have a mission with 100 players and need to append some init code
-  to every one.  See player_example.py
+  to every one and ensure they are playable.  See player_example.py
 
 ###Installation
 

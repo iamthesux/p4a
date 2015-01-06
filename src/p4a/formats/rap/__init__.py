@@ -1,12 +1,16 @@
-import shlex
 import re
-from collections import OrderedDict
-
-_version=1
-
+from StringIO import StringIO
 _kwp = re.compile(r'\W')
 _uqp = re.compile(r'^"|"$')
 _dqp = re.compile(r'""')
+
+def israP(fh):
+	s = fh.read(4)
+	val = False
+	if s == "\0raP":
+		val = True
+	fh.seek(-4, 1)
+	return val
 
 def uq(s):
 	"""
@@ -35,7 +39,7 @@ def value(s):
 	s = str(s)
 	if re.search(r'^-?\d+$', s):
 		return int(s)
-	elif re.search(r'-?^\d+\.\d+$', s):
+	elif re.search(r'^-?\d+\.\d+$', s):
 		return float(s)
 	else:
 		return uq(s)
@@ -50,6 +54,14 @@ def pvalue(val):
 	else: 
 		return str(val)
 
+def armatch(arr, string):
+	for var in arr:
+		if isinstance(var, list):
+			return armatch(var, string)
+		else:
+			if string in str(var):
+				return True
+	return False
 class Klass:
 	"""
 	A class that represents the base data structure.  Like an Arma class, it 
@@ -57,6 +69,7 @@ class Klass:
 	level Klass represents a document.  All of your datums are belong to it.
 	"""
 	
+
 	def __init__(self, _name=""):
 		"""
 		Creates an new Klass instance.  If name is empty, the class is considered
@@ -64,9 +77,11 @@ class Klass:
 		and subclasses.  In other words, to create a class that represents your base
 		document, call init with no args
 		"""
+		from collections import OrderedDict
 		self._data = OrderedDict()
 		self.name = _name
 		self._hiid = None
+		self.parent = None
 
 	def __getattr__(self, att):
 		"""
@@ -74,11 +89,20 @@ class Klass:
 		do the following:
 		
 		klasses:  gets a list of all the sub classes
+		inherits: returns a classes parent if assigned
 		keys: returns all the key/value keys. Not Implemented
 		keys: returns both kvp and sub classes. Not Implemented
 		"""
 		if att == "klasses":
 			return filter(lambda x: isinstance(x, Klass), self._data.keys())
+		elif att in ['inherits', 'extern', 'delete']:
+			return False
+		elif att == "parents":
+			parents = []
+			p = self.parent
+			while p:
+				parents.append(p.name)
+				p = p.parent
 		else:
 			raise AttributeError
 
@@ -106,10 +130,14 @@ class Klass:
 		if isinstance(val, Klass):
 			if val in self._data:
 				del self._data[val]
+			val.parent = self
 			self._data[val] = val
 		else:
 			return self._data[Klass(val)]
-			
+
+	def __contains__(self, val):
+		return Klass(val) in self._data
+
 	def __getitem__(self, idx):
 		"""
 		Get item and set item provide access to the key/value data of a
@@ -122,6 +150,24 @@ class Klass:
 	def __setitem__(self, idx, item=None):
 		self._data[idx] = item
 
+	def match(self, string):
+		if self.name == string:
+			return True
+		for key, val in self._data.iteritems():
+			if isinstance(key, Klass):
+				if key.match(string):
+					return True
+			else:
+				if string in key:
+					return True
+				if isinstance(val, list):
+					if armatch(val, string):
+						return True
+				else:
+					if string in str(val):
+						return True
+		return False
+					
 	def hiid(self):
 		"""
 		This searches itself and all sub classes recursively for a key named
@@ -141,105 +187,4 @@ class Klass:
 		A convenience method, calls the python filter function on all classes. Takes a function as an argument.
 		"""
 		return filter(f, self.klasses)
-		
-	def to_string(self, d=0):
-		"""
-		Converts the class to a properly formated and indented string.  Optionally takes
-		a starting indent level as an argument.
-		"""
-		ret = ""
-		if self.name:
-			ret += ("\t"*(d-1)) + "class " + self.name + "\n" + ("\t"*(d-1)) + "{\n"
-		for k,v in self._data.items():
-			if isinstance(k, Klass):
-				ret += k.to_string(d+1)
-			else:
-				ret += ("\t"*d)+ k
-				if isinstance(v, list):
-					ret += "[]="
-					if isinstance(v[0], str) or len(v) > 3:
-						ret +="\n" + ("\t"*d) + "{\n"
-						tmp = ",\n" + ("\t"*(d+1))
-						ret += ("\t"*(d+1)) + tmp.join(map(pvalue, v)) + "\n" + ("\t"*d) + "}"
-					else:
-						ret += "{" + ", ".join(map(pvalue,v)) + "}"
-				else:
-					ret += "=" + pvalue(v)
-				ret += ";\n"
-		if self.name:
-			ret += ("\t"*(d-1)) + "};\n"
-
-		return ret
-
-def parse(file):
-	"""
-	Takes file name as an argument and returns a root Klass instance containing all the data.
-	"""
-	lex = shlex.shlex(open(file))
-	lex.wordchars += '.'
-	tokens = list(lex);
-
-	ks = [Klass(),]
-	bs = []
-	kw = ""
-	vw = ""
-	va = []
-	arval = False
-	i = 0
-	DEBUG=False
-	while (i < len(tokens)):
-		if DEBUG: print tokens[i]
-		if (tokens[i] == "class" and tokens[i+1] != "="):
-			if DEBUG: print "K"
-			k = Klass(tokens[i+1])
-			ks.append(k)
-			bs.append(1)
-			i+=3
-		elif (tokens[i] == "{"):
-			if DEBUG: print "KE"
-			bs[-1]+=1
-			i+=1
-		elif (tokens[i] == "}"):
-			
-			bs[-1]-=1
-			if bs[-1] == 0:
-				if DEBUG: print "KL"
-				k = ks.pop()
-				ks[-1](k)
-				bs.pop()
-				i+=2;
-			else:
-				if DEBUG: print "KnL"
-				i+=1
-		elif not kw and not _kwp.search(tokens[i]):
-			if DEBUG: print "kw"
-			kw = tokens[i]
-			if tokens[i+1] == "[":
-				arval = True
-				i+=4;
-				va=[]
-			else:
-				arval=False
-				vw=""
-				i+=2
-		elif tokens[i] == ";":
-			if DEBUG: print "kve"
-			if kw:
-				if arval:
-					ks[-1][kw] = va
-				else:
-					ks[-1][kw] = uq(value(vw))
-				kw=""
-			i+=1
-		else:
-			
-			if arval:
-				if tokens[i] != ",":
-					if DEBUG: print "kva"
-					va.append(uq(value(tokens[i])))
-			else:
-				if DEBUG: print "kvs"
-				vw += tokens[i]
-			i+=1
-	return ks[0]
 
