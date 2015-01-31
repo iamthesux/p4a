@@ -172,6 +172,8 @@ class Klass:
 		"""
 		This searches itself and all sub classes recursively for a key named
 		id, then returns the highest number it finds as a value.
+		
+		TODO: obsolete this use nextid
 		"""
 		c = None
 		if 'id' in self._data and int(self._data['id']) > c:
@@ -181,7 +183,21 @@ class Klass:
 			if  id > c:
 				c = id
 		return c
-
+	
+	def nextid(self):
+		"""
+		This searches itself and all sub classes recursively for a key named
+		id, then returns the highest number it finds as a value.
+		"""
+		c = 0
+		if 'id' in self._data and int(self._data['id']) > c:
+			c = int(self._data['id'])
+		for k in self.klasses:
+			id = k.hiid()
+			if  id > c:
+				c = id
+		return c+1
+	
 	def filter(self, f):
 		"""
 		A convenience method, calls the python filter function on all classes. Takes a function as an argument.
