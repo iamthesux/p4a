@@ -1,6 +1,7 @@
 import pprint
-
 import cStringIO
+
+from .formats.rap import Klass
 
 _mode_flags = [
 	'remove_weapons',
@@ -19,13 +20,15 @@ _mode_flags = [
 	'clear_all'
 ]
 class LoadOut(object):
-	def __init__(self, name=''):
-		self._name = name
+	def __init__(self, **kwargs):
 		self._flags = []
-
+		if 'prefix' in kwargs:
+			self._prefix = kwargs.pop('prefix', '')
+		if 'name' in kwargs:
+			self._name = kwargs.pop('name', '')
 	@property
 	def name(self):
-		if self._name:
+		if hasattr(self, '_name'):
 			return self._name
 		else:
 			return self.__class__.__name__
@@ -33,15 +36,26 @@ class LoadOut(object):
 	def name(self, name):
 		self._name = name
 
+	
 	@property
-	def flags(self):
-		if self._name:
-			return self._name
+	def base(self):
+		if hasattr(self, '_base'):
+			return self._base
 		else:
-			return self.__class__.__name__
-	@name.setter
-	def flags(self, name):
-		self._name = name
+			return ''
+	@base.setter
+	def base(self, base):
+		self._base = base
+
+	@property
+	def prefix(self):
+		if hasattr(self, '_prefix'):
+			return self._prefix
+		else:
+			return ''
+	@prefix.setter
+	def prefix(self, prefix):
+		self._prefix = prefix
 
 	def remove(self, slot):
 		slot = 'remove_%s' % slot
@@ -62,7 +76,7 @@ class LoadOut(object):
 			wep = []
 			if hasattr(self, x):
 				atr = getattr(self, x)
-				for i in ['weapon', 'supressor', 'rail', 'optic']:
+				for i in ['weapon', 'suppressor', 'rail', 'optic']:
 					wep.append(getattr(atr, i, ''))
 				wep.append(getattr(atr, 'mags', []))
 			res.append(wep)
@@ -80,19 +94,71 @@ class LoadOut(object):
 		if hasattr(self, 'headgear'):
 			res.append(self.headgear)
 		return res
+	def generate_config(self):
+		k = Klass(self.prefix + self.name)
+		k.inherits = self.base
 		
-class Writer(object):
-	def __init__(self, file=None):
-		if isinstance(file, basestring):
-			self.stream = open(file, 'wb')
+		k['scope'] = 2
+	def write(self):
+		f = open(self.name + '.sqf', 'wb')
+		f.write(str(self.generate()) + ';')
+
+class Crate(LoadOut):
+	class NoWrite: pass
+	def __init__(self, **kwargs):
+		super(Crate, self).__init__(**kwargs)
+		if not self.base:
+			self.base = 'Box_NATO_AmmoOrd_F'
+	@property
+	def title(self):
+		if hasattr(self, '_title'):
+			return self._title
 		else:
-			self.stream = cStringIO.StringIO()
-		self.var_prefix = 'sux_lo_'
+			return ''
+	@title.setter
+	def title(self, title):
+		self._title = title
+
+	@property
+	def side(self):
+		if hasattr(self, '_side'):
+			return self._side
+		else:
+			return ''
+	@side.setter
+	def side(self, side):
+		self._side = side
+
+
+
+
+	def generate(self):
+		res = []
+		for x in ['weapons','magazines','backpacks','items']:
+			if hasattr(self, x):
+				res.append(getattr(self, x))
+		return res
+	def generate_config(self):
+		k = Klass(self.prefix + self.name)
+		k.inherits = self.base
+		k['scope'] = 2
 		
-	def write(self, load):
-		self.stream.write("%s%s = \n" % (self.var_prefix, load.name))
-		pp = pprint.PrettyPrinter(indent=4, stream=self.stream)
-		pp.pprint(load.generate())
-		self.stream.write(";\n\n")
-		return self.stream
+		k['displayName'] = self.title
+		k['maximumLoad'] = 9999999
+		k['transportMaxMagazines'] = 9999999
+		k['transportMaxMagazines'] = 9999999
+		k['transportMaxBackpacks'] = 9999999
 		
+		for type in ['weapons','magazines','backpacks','items']:
+			tk = Klass("Transport%s" % type.title())
+			if hasattr(self, type):
+				for item in getattr(self, type):
+					wk = Klass("_xx_%s" % item[0])
+					if type == 'item':
+						wk['name'] = item[0]
+					else:
+						wk[type[:-1]] = item[0]
+					wk['count'] = item[1]
+					tk(wk)
+			k(tk)
+		return k
