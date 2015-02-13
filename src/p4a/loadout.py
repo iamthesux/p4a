@@ -154,7 +154,7 @@ class Crate(LoadOut):
 			if hasattr(self, type):
 				for item in getattr(self, type):
 					wk = Klass("_xx_%s" % item[0])
-					if type == 'item':
+					if type == 'items':
 						wk['name'] = item[0]
 					else:
 						wk[type[:-1]] = item[0]
