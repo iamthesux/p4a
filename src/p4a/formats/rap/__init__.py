@@ -123,7 +123,7 @@ class Klass:
 		will overwrite any sub class already existing with the same name.
 		
 		If passed a the name of a class as a string, it will return the sub 
-		class with that name, or None if none exists.
+		class with that name, or an empty Klass if none exists.
 		"""
 		if val == None:
 			return self.klasses
@@ -133,7 +133,9 @@ class Klass:
 			val.parent = self
 			self._data[val] = val
 		else:
-			return self._data[Klass(val)]
+			if Klass(val) in self._data:
+				return self._data[Klass(val)]
+		return Klass()
 
 	def __contains__(self, val):
 		return Klass(val) in self._data
