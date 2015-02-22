@@ -89,10 +89,12 @@ class LoadOut(object):
 				if hasattr(atr, 'items'):
 					pak.append(getattr(atr, 'items'))
 			res.append(pak)
-		if hasattr(self, 'items'):
-			res.append(self.items)
-		if hasattr(self, 'headgear'):
-			res.append(self.headgear)
+
+		res.append(getattr(self, 'items', []))
+		res.append(getattr(self, 'headgear', ''))
+		res.append(getattr(self, 'binoc', ''))
+		res.append(getattr(self, 'goggles', ''))
+		
 		return res
 	def generate_config(self):
 		k = Klass(self.prefix + self.name)
@@ -129,11 +131,9 @@ class Crate(LoadOut):
 	def side(self, side):
 		self._side = side
 
-
-
-
 	def generate(self):
 		res = []
+		res.append(self._flags)
 		for x in ['weapons','magazines','backpacks','items']:
 			if hasattr(self, x):
 				res.append(getattr(self, x))
@@ -142,6 +142,7 @@ class Crate(LoadOut):
 		k = Klass(self.prefix + self.name)
 		k.inherits = self.base
 		k['scope'] = 2
+		k['vehicleClass'] = "Ammo"
 		
 		k['displayName'] = self.title
 		k['maximumLoad'] = 9999999
