@@ -130,6 +130,26 @@ class Crate(LoadOut):
 	@side.setter
 	def side(self, side):
 		self._side = side
+		
+	@property
+	def virtual(self):
+		if hasattr(self, '_virtual'):
+			return self._virtual
+		else:
+			return False
+	@virtual.setter
+	def virtual(self, virtual):
+		self._virtual = virtual
+
+	@property
+	def vehicle(self):
+		if hasattr(self, '_vehicle'):
+			return self._vehicle
+		else:
+			return False
+	@vehicle.setter
+	def vehicle(self, vehicle):
+		self._vehicle = vehicle
 
 	def generate(self):
 		res = []
@@ -137,19 +157,24 @@ class Crate(LoadOut):
 		for x in ['weapons','magazines','backpacks','items']:
 			if hasattr(self, x):
 				res.append(getattr(self, x))
+			else:
+				res.append([])
 		return res
-	def generate_config(self):
-		k = Klass(self.prefix + self.name)
-		k.inherits = self.base
-		k['scope'] = 2
-		k['vehicleClass'] = "Ammo"
+	def generate_config(self, k=None):
+		if not k:
+			k = Klass(self.prefix + self.name)
 		
-		k['displayName'] = self.title
-		k['maximumLoad'] = 9999999
-		k['transportMaxMagazines'] = 9999999
-		k['transportMaxMagazines'] = 9999999
-		k['transportMaxBackpacks'] = 9999999
-		
+		if not self.vehicle:
+			k.inherits = self.base
+			k['scope'] = 2
+			k['vehicleClass'] = "Ammo"
+			
+			k['displayName'] = self.title
+			k['maximumLoad'] = 9999999
+			k['transportMaxWeapons'] = 9999999
+			k['transportMaxMagazines'] = 9999999
+			k['transportMaxBackpacks'] = 9999999
+					
 		for type in ['weapons','magazines','backpacks','items']:
 			tk = Klass("Transport%s" % type.title())
 			if hasattr(self, type):

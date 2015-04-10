@@ -189,7 +189,7 @@ class Klass:
 	def nextid(self):
 		"""
 		This searches itself and all sub classes recursively for a key named
-		id, then returns the highest number it finds as a value.
+		id, then returns the next useable id.
 		"""
 		c = 0
 		if 'id' in self._data and int(self._data['id']) > c:
@@ -198,6 +198,20 @@ class Klass:
 			id = k.hiid()
 			if  id > c:
 				c = id
+		return c+1
+	
+	def nextsid(self):
+		"""
+		This searches itself and all sub classes recursively for a key named
+		syncId, then returns the next useable id.
+		"""
+		c = 0
+		if 'syncId' in self._data and int(self._data['syncId']) > c:
+			c = int(self._data['syncId'])
+		for k in self.klasses:
+			id = k.nextsid()
+			if (id-1) > c:
+				c = id-1
 		return c+1
 	
 	def filter(self, f):

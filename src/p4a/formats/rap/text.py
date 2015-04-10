@@ -66,10 +66,19 @@ class Reader(object):
 		while (i < len(tokens)):
 			if DEBUG: print tokens[i]
 			if (tokens[i] == "class" and tokens[i+1] != "="):
-				if DEBUG: print "K"
+				if DEBUG: print "K: %s" % tokens[i+1]
 				k = Klass(tokens[i+1])
-				ks.append(k)
-				bs.append(1)
+				
+				if DEBUG: print "TK: %s" % tokens[i+2]
+				if tokens[i+2] == ';':
+					k.extern = True
+					ks[-1](k)
+				else:
+					if tokens[i+2] == ':':
+						k.inherits =  tokens[i+3]
+						i+=2
+					bs.append(1)
+					ks.append(k)
 				i+=3
 			elif (tokens[i] == "{"):
 				if DEBUG: print "KE"
