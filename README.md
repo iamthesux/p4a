@@ -24,11 +24,9 @@ A collection of tools for working with the Real Virtuality engine.
 
 ###Installation
 
-You will need python 2.7 or greater (but not 3).  Download as ZIP, unpack
-and run:
-
+Install directly from github with pip:
 ```
-python setup.py install
+pip install https://github.com/iamthesux/p4a/archive/master.zip
 ```
 
 ###Usage
